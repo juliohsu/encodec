@@ -8,7 +8,7 @@
 
 import math
 import typing as tp
-import warnings
+import warnings 
 
 import torch
 from torch import nn
@@ -29,7 +29,7 @@ def apply_parametrization_norm(module: nn.Module, norm: str = 'none') -> nn.Modu
     elif norm == 'spectral_norm':
         return spectral_norm(module)
     else:
-        # We already check was in CONV_NORMALIZATION, so any other choice
+        # We have already check if 'norm' is in CONV_NORMALIZATION, so any other choice
         # doesn't need reparametrization.
         return module
 
@@ -58,6 +58,7 @@ def get_extra_padding_for_conv1d(x: torch.Tensor, kernel_size: int, stride: int,
     length = x.shape[-1]
     n_frames = (length - kernel_size + padding_total) / stride + 1
     ideal_length = (math.ceil(n_frames) - 1) * stride + (kernel_size - padding_total)
+    # print(f'extra padding output element (length, num_frames, ideal_length): {length, n_frames, ideal_length}\n')
     return ideal_length - length
 
 
@@ -106,7 +107,7 @@ def unpad1d(x: torch.Tensor, paddings: tp.Tuple[int, int]):
 
 
 class NormConv1d(nn.Module):
-    """Wrapper around Conv1d and normalization applied to this conv
+    """Wrapper around Conv1d and normalization applied to this convolution
     to provide a uniform interface across normalization approaches.
     """
     def __init__(self, *args, causal: bool = False, norm: str = 'none',
@@ -119,18 +120,19 @@ class NormConv1d(nn.Module):
     def forward(self, x):
         x = self.conv(x)
         x = self.norm(x)
+        print(f'normconv1d x.shape: {x.shape}')
         return x
 
 
 class NormConv2d(nn.Module):
-    """Wrapper around Conv2d and normalization applied to this conv
+    """Wrapper around Conv2d and normalization applied to this convolution
     to provide a uniform interface across normalization approaches.
     """
-    def __init__(self, *args, norm: str = 'none',
+    def __init__(self, *args, causal: bool = False, norm: str = 'none',
                  norm_kwargs: tp.Dict[str, tp.Any] = {}, **kwargs):
         super().__init__()
         self.conv = apply_parametrization_norm(nn.Conv2d(*args, **kwargs), norm)
-        self.norm = get_norm_module(self.conv, causal=False, norm=norm, **norm_kwargs)
+        self.norm = get_norm_module(self.conv, causal, norm, **norm_kwargs)
         self.norm_type = norm
 
     def forward(self, x):
@@ -140,7 +142,7 @@ class NormConv2d(nn.Module):
 
 
 class NormConvTranspose1d(nn.Module):
-    """Wrapper around ConvTranspose1d and normalization applied to this conv
+    """Wrapper around ConvTranspose1d and normalization applied on this convolution
     to provide a uniform interface across normalization approaches.
     """
     def __init__(self, *args, causal: bool = False, norm: str = 'none',
@@ -157,14 +159,15 @@ class NormConvTranspose1d(nn.Module):
 
 
 class NormConvTranspose2d(nn.Module):
-    """Wrapper around ConvTranspose2d and normalization applied to this conv
+    """Wrapper around ConvTranspose2d and normalization applied on this convolution
     to provide a uniform interface across normalization approaches.
     """
-    def __init__(self, *args, norm: str = 'none',
+    def __init__(self, *args, causal: bool = False, norm: str = 'none',
                  norm_kwargs: tp.Dict[str, tp.Any] = {}, **kwargs):
         super().__init__()
         self.convtr = apply_parametrization_norm(nn.ConvTranspose2d(*args, **kwargs), norm)
-        self.norm = get_norm_module(self.convtr, causal=False, norm=norm, **norm_kwargs)
+        self.norm = get_norm_module(self.convtr, causal, norm, **norm_kwargs)
+        self.norm_type = norm
 
     def forward(self, x):
         x = self.convtr(x)
@@ -193,12 +196,14 @@ class SConv1d(nn.Module):
         self.pad_mode = pad_mode
 
     def forward(self, x):
+        print(f'\nsconv1d bf pad: {x.shape}')
         B, C, T = x.shape
         kernel_size = self.conv.conv.kernel_size[0]
         stride = self.conv.conv.stride[0]
         dilation = self.conv.conv.dilation[0]
         kernel_size = (kernel_size - 1) * dilation + 1  # effective kernel size with dilations
         padding_total = kernel_size - stride
+        # print(f'input (x, kernel_size, stride, padding_total): {x.shape, kernel_size, stride, padding_total}')
         extra_padding = get_extra_padding_for_conv1d(x, kernel_size, stride, padding_total)
         if self.causal:
             # Left padding for causal
@@ -208,6 +213,7 @@ class SConv1d(nn.Module):
             padding_right = padding_total // 2
             padding_left = padding_total - padding_right
             x = pad1d(x, (padding_left, padding_right + extra_padding), mode=self.pad_mode)
+        print(f'sconv1d af pad: {x.shape}')
         return self.conv(x)
 
 

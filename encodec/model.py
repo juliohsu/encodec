@@ -40,7 +40,7 @@ class LMModel(nn.Module):
         self.n_q = n_q
         self.dim = dim
         self.transformer = m.StreamingTransformerEncoder(dim=dim, **kwargs)
-        self.emb = nn.ModuleList([nn.Embedding(card + 1, dim) for _ in range(n_q)])
+        self.emb = nn.ModuleList([nn.Embedding(card + 1, dim)] for _ in range(n_q))
         self.linears = nn.ModuleList([nn.Linear(dim, card) for _ in range(n_q)])
 
     def forward(self, indices: torch.Tensor,
@@ -142,6 +142,7 @@ class EncodecModel(nn.Module):
         for offset in range(0, length, stride):
             frame = x[:, :, offset: offset + segment_length]
             encoded_frames.append(self._encode_frame(frame))
+        print(x.shape)
         return encoded_frames
 
     def _encode_frame(self, x: torch.Tensor) -> EncodedFrame:
@@ -157,7 +158,7 @@ class EncodecModel(nn.Module):
             scale = scale.view(-1, 1)
         else:
             scale = None
-
+        
         emb = self.encoder(x)
         codes = self.quantizer.encode(emb, self.frame_rate, self.bandwidth)
         codes = codes.transpose(0, 1)

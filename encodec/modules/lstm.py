@@ -7,7 +7,7 @@
 """LSTM layers module."""
 
 from torch import nn
-
+ 
 
 class SLSTM(nn.Module):
     """
@@ -20,9 +20,11 @@ class SLSTM(nn.Module):
         self.lstm = nn.LSTM(dimension, dimension, num_layers)
 
     def forward(self, x):
+        print(f'\nLSTM bf: {x.shape}')
         x = x.permute(2, 0, 1)
         y, _ = self.lstm(x)
         if self.skip:
             y = y + x
         y = y.permute(1, 2, 0)
+        print(f'LSTM af: {x.shape}')
         return y

@@ -55,7 +55,7 @@ def laplace_smoothing(x, n_categories: int, epsilon: float = 1e-5):
 
 
 def uniform_init(*shape: int):
-    t = torch.empty(shape)
+    t = torch.empty(*shape)
     nn.init.kaiming_uniform_(t)
     return t
 
@@ -71,7 +71,7 @@ def sample_vectors(samples, num: int):
     return samples[indices]
 
 
-def kmeans(samples, num_clusters: int, num_iters: int = 10):
+def kmeans(samples, num_clusters: int, num_iters: int = 10): 
     dim, dtype = samples.shape[-1], samples.dtype
 
     means = sample_vectors(samples, num_clusters)
@@ -280,7 +280,7 @@ class VectorQuantization(nn.Module):
         return self._codebook.embed
 
     def encode(self, x):
-        x = rearrange(x, "b d n -> b n d")
+        x = rearrange(x, "b d n -> b n d") 
         x = self.project_in(x)
         embed_in = self._codebook.encode(x)
         return embed_in

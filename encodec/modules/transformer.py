@@ -84,7 +84,7 @@ class StreamingTransformerEncoder(nn.Module):
         self.max_period = max_period
         self.past_context = past_context
         activation: tp.Any = F.gelu if gelu else F.relu
-
+        
         self.norm_in: nn.Module
         if norm_in:
             self.norm_in = nn.LayerNorm(dim)
